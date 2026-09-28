@@ -1,0 +1,24 @@
+name: Build APK
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.7" }
+      - run: unzip -q ech0-project.zip -d proj
+      - name: Isi kunci Supabase
+        env:
+          SB_URL: ${{ secrets.SUPABASE_URL }}
+          SB_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          test -n "$SB_URL" && test -n "$SB_KEY" || { echo "Isi secret SUPABASE_URL dan SUPABASE_KEY dulu"; exit 1; }
+          sed -i "s|__SUPABASE_URL__|$SB_URL|; s|__SUPABASE_KEY__|$SB_KEY|" proj/app/src/main/java/com/h4ll0/ech0/Api.kt
+      - run: gradle -p proj assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ech0-APK
+          path: proj/app/build/outputs/apk/debug/app-debug.apk
